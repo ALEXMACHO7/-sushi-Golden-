@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Barra de 10 Sushis - Súper Dinámica</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background: #0f172a;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            overflow: hidden;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .pantalla {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.98);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .oculto { display: none !important; }
+        #menu-principal {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .tarjeta-juego {
+            background: #1e293b;
+            border: 3px solid #334155;
+            border-radius: 15px;
+            padding: 25px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            max-width: 280px;
+            width: 100%;
+        }
+        .tarjeta-juego.completado {
+            background: #064e3b;
+            border-color: #059669;
+            opacity: 0.8;
+            cursor: default;
+        }
+        .contenedor-sushi {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 90;
+            padding: 20px 0;
+            box-sizing: border-box;
+        }
+        .panel-superior {
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 12px 10px;
+            background: rgba(15, 23, 42, 0.9);
+            box-sizing: border-box;
+            border-bottom: 3px solid #334155;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .caja-info {
+            background: #334155;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 2px solid #475569;
+        }
+        .zona-interactiva {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            width: 100%;
+            cursor: pointer;
+        }
+        #sushis-contenedor {
+            font-size: 60px;
+            transition: transform 0.1s ease;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.6));
+            margin-bottom: 15px;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: 320px;
+            min-height: 90px;
+            align-items: center;
+        }
+        .sushi-pieza {
+            animation: flotar 1.5s ease-in-out infinite alternate;
+        }
+        @keyframes flotar {
+            0% { transform: translateY(0px) scale(1); }
+            100% { transform: translateY(-6px) scale(1.05); }
+        }
+        @keyframes destelloAnim {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        .efecto-destello {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #38bdf8 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: destelloAnim 0.4s ease-out forwards;
+        }
+        /* Animación de estrellas / cometas cayendo sobre el sushi */
+        @keyframes caerEstrella {
+            0% { transform: translateY(-50px) scale(0.5); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(40px) scale(1.2); opacity: 0; }
+        }
+        .cometa-estrella {
+            position: absolute;
+            font-size: 24px;
+            pointer-events: none;
+            animation: caerEstrella 0.6s ease-out forwards;
+            z-index: 95;
+        }
+        .btn-accion-principal {
+            background: linear-gradient(135deg, #10b981, #047857);
+            color: white;
+            border: none;
+            padding: 14px 25px;
+            font-weight: bold;
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            width: 100%;
+        }
+        .lista-resultados {
+            max-height: 220px;
+            overflow-y: auto;
+            width: 100%;
+            text-align: left;
+            padding-right: 5px;
+        }
+        .item-res {
+            background: #0f172a;
+            border: 1px solid #334155;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- MENÚ PRINCIPAL -->
+    <div id="menu-principal">
+        <h1 style="color: #38bdf8; margin-bottom: 5px; font-size: 22px;">🍣 10 Sushis Dinámicos</h1>
+        <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 20px; text-align: center; padding: 0 10px;">¡Abre 10 sushis con mayores probabilidades de división, lluvia de estrellas y premios variables!</p>
+        <div class="tarjeta-juego" id="tarjeta-sushi" onclick="verificarYComenzar()">
+            <div style="font-size:38px; margin-bottom:8px;">🍣</div>
+            <div style="font-size:15px; font-weight:bold; color:white;">Abrir 10 Sushis</div>
+            <div id="estado-sushi" style="font-size:12px; color:#cbd5e1; margin-top:8px; font-weight:bold;">▶️ Jugar Ahora</div>
+        </div>
+    </div>
+
+    <!-- MINIJUEGO DE 10 SUSHIS -->
+    <div id="mg-sushi" class="contenedor-sushi oculto">
+        <div class="panel-superior">
+            <div class="caja-info">🍣 Sushi: <span id="num-sushi-actual">1</span>/10</div>
+            <div class="caja-info">⚡ Toques: <span id="num-toques">0</span>/3</div>
+        </div>
+
+        <div class="zona-interactiva" id="zona-clic" onclick="tocarSushi(event)">
+            <div id="sushi-mensaje" style="font-size: 16px; font-weight: bold; color: #38bdf8; margin-bottom: 10px; text-align: center; padding: 0 15px;">¡Toca 3 veces para abrir este sushi!</div>
+            <div id="sushis-contenedor">
+                <div class="sushi-pieza">🍣</div>
+            </div>
+            <div style="font-size: 12px; color: #94a3b8; margin-top: 15px;">(Toca la pantalla)</div>
+        </div>
+    </div>
+
+    <!-- PANTALLA DE RESULTADO FINAL (O GUARDADO) -->
+    <div id="pantalla-resultado" class="pantalla oculto">
+        <div style="background: #1e293b; border: 3px solid #334155; border-radius: 20px; padding: 20px; max-width: 340px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center;">
+            <h1 id="titulo-resultado" style="color: #38bdf8; font-size: 19px; margin-top: 0; margin-bottom: 5px;">🎉 ¡Resumen de Premios!</h1>
+            <p id="subtitulo-resultado" style="color: #cbd5e1; font-size: 12px; margin-bottom: 15px;">Estos son los premios obtenidos en tus 10 sushis:</p>
+            
+            <div class="lista-resultados" id="contenedor-lista-premios">
+                <!-- Se llena dinámicamente -->
+            </div>
+
+            <button class="btn-accion-principal" style="margin-top: 15px;" onclick="location.reload()">Aceptar</button>
+        </div>
+    </div>
+
+    <script>
+        const CLAVE_SUSHI_DINAMICO = 'feria_10_sushis_dinamico_v1';
+        let datosJuego = JSON.parse(localStorage.getItem(CLAVE_SUSHI_DINAMICO)) || {
+            completado: false,
+            premiosTotales: []
+        };
+
+        // Si ya se jugó previamente, se muestra directamente el historial guardado
+        if (datosJuego.completado) {
+            document.getElementById('menu-principal').style.display = 'none';
+            document.getElementById('titulo-resultado').innerText = "✅ Ya reclamado";
+            document.getElementById('subtitulo-resultado').innerText = "Ya utilizaste tus 10 intentos en esta barra de sushi:";
+            
+            let listaHTML = "";
+            datosJuego.premiosTotales.forEach((res, index) => {
+                listaHTML += `<div class="item-res"><span><b>Sushi #${index + 1}</b> (${res.cantidad} pzas)</span><span style="color: #f59e0b; font-weight: bold;">${res.texto}</span></div>`;
+            });
+            document.getElementById('contenedor-lista-premios').innerHTML = listaHTML;
+            document.getElementById('pantalla-resultado').classList.remove('oculto');
+        }
+
+        function verificarYComenzar() {
+            if (datosJuego.completado) return;
+            document.getElementById('menu-principal').style.display = 'none';
+            document.getElementById('mg-sushi').classList.remove('oculto');
+            iniciarNuevoSushi();
+        }
+
+        // Probabilidades base de premios iniciales (con +1% añadido a cada uno):
+        // Originales: Huevo básico (50%), Camello (20%), Hormiga (10%), Huevo jubilado (10%), Huevo roto (10%)
+        // Con +1% cada uno, se ajusta de forma proporcional para mantener el 100%:
+        // - Huevo básico: 49.5%
+        // - Camello: 21%
+        // - Hormiga: 11%
+        // - Huevo jubilado: 11%
+        // - Huevo roto: 7.5%
+        
+        // Cuando el sushi se divide (es decir, cantidad > 1), sufren cambio:
+        // Los que tenían 10% pasan a 5% (-5%)
+        // Los que tenían 20% pasan a 30% (+10%)
+        // Por tanto, en fase dividida:
+        // - Camello (original 20% -> pasa a 30%)
+        // - Hormiga (original 10% -> pasa a 5%)
+        // - Huevo jubilado (original 10% -> pasa a 5%)
+        // - Huevo roto (original 10% -> pasa a 5%)
+        // - Huevo básico absorbe el resto para cerrar en 100% (55%)
+        function sortearPremioUnico(estaDividido) {
+            let rnd = Math.random() * 100;
+            if (!estaDividido) {
+                if (rnd < 49.5) return "Huevo básico";
+                if (rnd < 70.5) return "Camello";
+                if (rnd < 81.5) return "Hormiga";
+                if (rnd < 92.5) return "Huevo jubilado";
+                return "Huevo roto";
+            } else {
+                if (rnd < 55) return "Huevo básico";
+                if (rnd < 85) return "Camello";
+                if (rnd < 90) return "Hormiga";
+                if (rnd < 95) return "Huevo jubilado";
+                return "Huevo roto";
+            }
+        }
+
+        let sushiActualIndex = 1;
+        let toquesActuales = 0;
+        let cantidadSushisActuales = 1; // 1, 2, 4, 6 u 8
+        let premiosAcumuladosSesion = [];
+        let bloqueadoAccion = false;
+
+        function iniciarNuevoSushi() {
+            toquesActuales = 0;
+            cantidadSushisActuales = 1;
+            document.getElementById('num-sushi-actual').innerText = sushiActualIndex;
+            document.getElementById('num-toques').innerText = "0";
+            document.getElementById('sushi-mensaje').innerText = `¡Toca 3 veces para abrir el sushi #${sushiActualIndex}!`;
+            actualizarVisualSushis();
+            bloqueadoAccion = false;
+        }
+
+        function actualizarVisualSushis() {
+            let html = '';
+            for (let i = 0; i < cantidadSushisActuales; i++) {
+                html += '<div class="sushi-pieza">🍣</div>';
+            }
+            document.getElementById('sushis-contenedor').innerHTML = html;
+        }
+
+        function tocarSushi(e) {
+            if (bloqueadoAccion) return;
+            if (toquesActuales >= 3) return;
+
+            toquesActuales++;
+            document.getElementById('num-toques').innerText = toquesActuales;
+
+            // Crear efecto de destello visual
+            crearDestello(e);
+
+            // Probabilidades de división en cada toque según lo solicitado:
+            // - 60% que pasen a 2 sushis
+            // - 30% que pasen de 2 a 4 sushis
+            // - 15% que pasen a 6 sushis
+            // - 7% que pasen a 8 sushis
+            let rndDiv = Math.random() * 100;
+            let nuevaCantidad = cantidadSushisActuales;
+
+            if (rndDiv < 7 && cantidadSushisActuales < 8) {
+                nuevaCantidad = 8;
+            } else if (rndDiv < 15 && cantidadSushisActuales < 6) {
+                nuevaCantidad = 6;
+            } else if (rndDiv < 30 && cantidadSushisActuales < 4) {
+                nuevaCantidad = 4;
+            } else if (rndDiv < 60 && cantidadSushisActuales < 2) {
+                nuevaCantidad = 2;
+            }
+
+            if (nuevaCantidad > cantidadSushisActuales) {
+                cantidadSushisActuales = nuevaCantidad;
+                actualizarVisualSushis();
+                lanzarEstrellasCometa();
+                document.getElementById('sushi-mensaje').innerText = `✨ ¡Se dividió en ${cantidadSushisActuales} sushis! ¡Premios mejorados!`;
+            }
+
+            if (toquesActuales === 3) {
+                bloqueadoAccion = true;
+                procesarPremioSushiActual();
+            }
+        }
+
+        function crearDestello(e) {
+            let zona = document.getElementById('zona-clic');
+            let rect = zona.getBoundingClientRect();
+            let x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left - 40;
+            let y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top - 40;
+
+            let destello = document.createElement('div');
+            destello.className = 'efecto-destello';
+            destello.style.left = x + 'px';
+            destello.style.top = y + 'px';
+            zona.appendChild(destello);
+
+            setTimeout(() => {
+                destello.remove();
+            }, 400);
+        }
+
+        function lanzarEstrellasCometa() {
+            let contenedor = document.getElementById('sushis-contenedor');
+            for (let i = 0; i < 4; i++) {
+                let estrella = document.createElement('div');
+                estrella.className = 'cometa-estrella';
+                estrella.innerText = '⭐';
+                estrella.style.left = (Math.random() * 220 - 20) + 'px';
+                estrella.style.top = (Math.random() * 20 - 10) + 'px';
+                contenedor.appendChild(estrella);
+                setTimeout(() => {
+                    estrella.remove();
+                }, 600);
+            }
+        }
+
+        function procesarPremioSushiActual() {
+            let estaDividido = cantidadSushisActuales > 1;
+            let nombresPremios = [];
+            for (let i = 0; i < cantidadSushisActuales; i++) {
+                nombresPremios.push(sortearPremioUnico(estaDividido));
+            }
+
+            let textoResumenPremio = nombresPremios.join(', ');
+            premiosAcumuladosSesion.push({
+                texto: textoResumenPremio,
+                cantidad: cantidadSushisActuales
+            });
+
+            document.getElementById('sushi-mensaje').innerText = `🎁 ¡Ganaste: ${textoResumenPremio}!`;
+
+            setTimeout(() => {
+                if (sushiActualIndex < 10) {
+                    sushiActualIndex++;
+                    iniciarNuevoSushi();
+                } else {
+                    finalizarTodosLosSushis();
+                }
+            }, 1300);
+        }
+
+        function finalizarTodosLosSushis() {
+            // Guardar permanentemente en localStorage
+            datosJuego.completado = true;
+            datosJuego.premiosTotales = premiosAcumuladosSesion;
+            localStorage.setItem(CLAVE_SUSHI_DINAMICO, JSON.stringify(datosJuego));
+
+            // Renderizar la lista de resultados
+            let listaHTML = "";
+            premiosAcumuladosSesion.forEach((res, index) => {
+                listaHTML += `<div class="item-res"><span><b>Sushi #${index + 1}</b> (${res.cantidad} pzas)</span><span style="color: #f59e0b; font-weight: bold;">${res.texto}</span></div>`;
+            });
+            document.getElementById('contenedor-lista-premios').innerHTML = listaHTML;
+
+            // Mostrar pantalla final
+            document.getElementById('mg-sushi').classList.add('oculto');
+            document.getElementById('pantalla-resultado').classList.remove('oculto');
+        }
+    </script>
+</body>
+  </html>
+  
